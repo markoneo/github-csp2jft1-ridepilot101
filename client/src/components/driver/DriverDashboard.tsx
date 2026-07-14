@@ -404,6 +404,47 @@ const DashboardContent = ({ driverName, onLogout }: {
     return { pending, accepted, completed, totalEarnings };
   }, [projects, payments]);
 
+  const [earningsYear, setEarningsYear] = useState(new Date().getFullYear());
+
+  const monthlyEarnings = useMemo(() => {
+    const months = Array.from({ length: 12 }, (_, i) => ({
+      month: i,
+      label: new Date(earningsYear, i).toLocaleDateString('en-US', { month: 'short' }),
+      fullLabel: new Date(earningsYear, i).toLocaleDateString('en-US', { month: 'long' }),
+      trips: 0,
+      tripEarnings: 0,
+      paymentEarnings: 0,
+      total: 0,
+    }));
+
+    projects
+      .filter(p => p.status === 'completed')
+      .forEach(p => {
+        const d = new Date(p.date);
+        if (d.getFullYear() === earningsYear) {
+          const m = d.getMonth();
+          months[m].trips += 1;
+          months[m].tripEarnings += p.driver_fee || p.price;
+        }
+      });
+
+    payments
+      .filter(p => p.status === 'paid')
+      .forEach(p => {
+        const d = new Date(p.date);
+        if (d.getFullYear() === earningsYear) {
+          const m = d.getMonth();
+          months[m].paymentEarnings += p.amount;
+        }
+      });
+
+    months.forEach(m => { m.total = m.tripEarnings + m.paymentEarnings; });
+    return months;
+  }, [projects, payments, earningsYear]);
+
+  const yearTotal = useMemo(() => monthlyEarnings.reduce((s, m) => s + m.total, 0), [monthlyEarnings]);
+  const maxMonthly = useMemo(() => Math.max(...monthlyEarnings.map(m => m.total), 1), [monthlyEarnings]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-blue-900 flex items-center justify-center p-4">
@@ -551,6 +592,63 @@ const DashboardContent = ({ driverName, onLogout }: {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Monthly Earnings Breakdown */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="bg-green-100 p-2 rounded-lg">
+                <TrendingUp className="w-5 h-5 text-green-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Monthly Earnings</h3>
+                <p className="text-sm text-gray-500">Total: {'\u20AC'}{yearTotal.toFixed(2)}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setEarningsYear(y => y - 1)}
+                className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+              </button>
+              <span className="text-sm font-semibold text-gray-700 min-w-[3rem] text-center">{earningsYear}</span>
+              <button
+                onClick={() => setEarningsYear(y => y + 1)}
+                className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+              </button>
+            </div>
+          </div>
+          <div className="p-5">
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
+              {monthlyEarnings.map((m) => {
+                const barHeight = m.total > 0 ? Math.max((m.total / maxMonthly) * 100, 8) : 0;
+                const currentMonth = new Date().getMonth();
+                const currentYear = new Date().getFullYear();
+                const isCurrent = earningsYear === currentYear && m.month === currentMonth;
+                return (
+                  <div key={m.month} className={`flex flex-col items-center p-2 rounded-xl transition-colors ${isCurrent ? 'bg-green-50 ring-1 ring-green-200' : 'hover:bg-gray-50'}`}>
+                    <span className="text-xs font-medium text-gray-500 mb-2">{m.label}</span>
+                    <div className="w-full h-20 flex items-end justify-center mb-2">
+                      <div
+                        className={`w-6 rounded-t-md transition-all duration-500 ${m.total > 0 ? 'bg-gradient-to-t from-green-600 to-green-400' : 'bg-gray-100'}`}
+                        style={{ height: `${barHeight}%` }}
+                      />
+                    </div>
+                    <span className={`text-xs font-bold ${m.total > 0 ? 'text-gray-900' : 'text-gray-400'}`}>
+                      {'\u20AC'}{m.total.toFixed(0)}
+                    </span>
+                    {m.trips > 0 && (
+                      <span className="text-[10px] text-gray-400 mt-0.5">{m.trips} trip{m.trips !== 1 ? 's' : ''}</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
 
         {/* Project Categories */}
         {organizedProjects.urgent.length > 0 && (
