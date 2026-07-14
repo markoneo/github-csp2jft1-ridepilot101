@@ -170,18 +170,22 @@ export default function Statistics() {
       return projectYear === selectedYear && p.status === 'completed';
     });
 
+    const driverNameMap = new Map<string, string>();
+    drivers.forEach(d => driverNameMap.set(d.id, d.name));
+
     const driverMap = new Map<string, { name: string; count: number; earnings: number }>();
 
     yearProjects.forEach(project => {
       if (!project.driver) return;
-      const existing = driverMap.get(project.driver) || { name: project.driver, count: 0, earnings: 0 };
+      const driverName = driverNameMap.get(project.driver) || project.driver;
+      const existing = driverMap.get(project.driver) || { name: driverName, count: 0, earnings: 0 };
       existing.count += 1;
       existing.earnings += project.price;
       driverMap.set(project.driver, existing);
     });
 
     return Array.from(driverMap.values()).sort((a, b) => b.count - a.count);
-  }, [projects, selectedYear]);
+  }, [projects, selectedYear, drivers]);
 
   // Calculate overview statistics
   const overviewStats = useMemo(() => {
