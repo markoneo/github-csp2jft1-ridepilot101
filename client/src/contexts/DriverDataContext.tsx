@@ -180,10 +180,13 @@ export function DriverDataProvider({ children, driverId, driverUuid }: DriverDat
         console.log('Note: last_login column not available, skipping update');
       }
 
-      // Fetch driver payments
+      // Fetch driver payments directly from payments table
       try {
         const { data: paymentsData, error: paymentsError } = await supabase
-          .rpc('get_driver_payments', { driver_uuid: driverUuid });
+          .from('payments')
+          .select('*')
+          .eq('driver_id', driverUuid)
+          .order('date', { ascending: false });
 
         if (paymentsError) {
           console.error('Error fetching driver payments:', paymentsError);
@@ -295,12 +298,18 @@ export function DriverDataProvider({ children, driverId, driverUuid }: DriverDat
 
   const addDriverPayment = useCallback(async (amount: number, date: string, description: string) => {
     const { data, error } = await supabase
-      .rpc('add_driver_payment', {
-        p_driver_id: driverUuid,
-        p_amount: amount,
-        p_date: date,
-        p_description: description
-      });
+      .from('payments')
+      .insert({
+        driver_id: driverUuid,
+        amount,
+        date,
+        description,
+        status: 'pending',
+        source: 'driver',
+        user_id: driverUuid,
+      })
+      .select()
+      .single();
 
     if (error) {
       console.error('Error adding driver payment:', error);

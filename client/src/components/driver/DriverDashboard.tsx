@@ -520,9 +520,9 @@ const DashboardContent = ({ driverName, onLogout }: {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Earnings</p>
-                <p className="text-xl font-bold text-purple-600">€{stats.totalEarnings.toFixed(0)}</p>
+                <p className="text-xl font-bold text-green-600">€{stats.totalEarnings.toFixed(0)}</p>
               </div>
-              <DollarSign className="w-8 h-8 text-purple-500" />
+              <DollarSign className="w-8 h-8 text-green-500" />
             </div>
           </div>
         </div>
