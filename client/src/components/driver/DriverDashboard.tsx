@@ -444,6 +444,28 @@ const DashboardContent = ({ driverName, onLogout }: {
 
   const yearTotal = useMemo(() => monthlyEarnings.reduce((s, m) => s + m.total, 0), [monthlyEarnings]);
   const maxMonthly = useMemo(() => Math.max(...monthlyEarnings.map(m => m.total), 1), [monthlyEarnings]);
+  const [earningsExpanded, setEarningsExpanded] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
+
+  const selectedMonthTrips = useMemo(() => {
+    if (selectedMonth === null) return [];
+    return projects
+      .filter(p => {
+        const d = new Date(p.date);
+        return p.status === 'completed' && d.getFullYear() === earningsYear && d.getMonth() === selectedMonth;
+      })
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [projects, earningsYear, selectedMonth]);
+
+  const selectedMonthPayments = useMemo(() => {
+    if (selectedMonth === null) return [];
+    return payments
+      .filter(p => {
+        const d = new Date(p.date);
+        return p.status === 'paid' && d.getFullYear() === earningsYear && d.getMonth() === selectedMonth;
+      })
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [payments, earningsYear, selectedMonth]);
 
   if (loading) {
     return (
@@ -595,58 +617,155 @@ const DashboardContent = ({ driverName, onLogout }: {
 
         {/* Monthly Earnings Breakdown */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+          <button
+            onClick={() => { setEarningsExpanded(e => !e); if (earningsExpanded) setSelectedMonth(null); }}
+            className="w-full px-5 py-4 border-b border-gray-100 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"
+          >
             <div className="flex items-center gap-3">
               <div className="bg-green-100 p-2 rounded-lg">
                 <TrendingUp className="w-5 h-5 text-green-600" />
               </div>
-              <div>
+              <div className="text-left">
                 <h3 className="text-lg font-semibold text-gray-900">Monthly Earnings</h3>
-                <p className="text-sm text-gray-500">Total: {'\u20AC'}{yearTotal.toFixed(2)}</p>
+                <p className="text-sm text-gray-500">Total {earningsYear}: {'\u20AC'}{yearTotal.toFixed(2)}</p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className={`w-5 h-5 text-gray-400 transition-transform duration-300 ${earningsExpanded ? 'rotate-180' : ''}`}
+              fill="none" viewBox="0 0 24 24" stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+
+          <div className={`transition-all duration-300 ease-in-out overflow-hidden ${earningsExpanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`}>
+            <div className="px-5 pt-3 pb-1 flex items-center justify-center gap-2">
               <button
-                onClick={() => setEarningsYear(y => y - 1)}
+                onClick={() => { setEarningsYear(y => y - 1); setSelectedMonth(null); }}
                 className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
               </button>
               <span className="text-sm font-semibold text-gray-700 min-w-[3rem] text-center">{earningsYear}</span>
               <button
-                onClick={() => setEarningsYear(y => y + 1)}
+                onClick={() => { setEarningsYear(y => y + 1); setSelectedMonth(null); }}
                 className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
               </button>
             </div>
-          </div>
-          <div className="p-5">
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
-              {monthlyEarnings.map((m) => {
-                const barHeight = m.total > 0 ? Math.max((m.total / maxMonthly) * 100, 8) : 0;
-                const currentMonth = new Date().getMonth();
-                const currentYear = new Date().getFullYear();
-                const isCurrent = earningsYear === currentYear && m.month === currentMonth;
-                return (
-                  <div key={m.month} className={`flex flex-col items-center p-2 rounded-xl transition-colors ${isCurrent ? 'bg-green-50 ring-1 ring-green-200' : 'hover:bg-gray-50'}`}>
-                    <span className="text-xs font-medium text-gray-500 mb-2">{m.label}</span>
-                    <div className="w-full h-20 flex items-end justify-center mb-2">
-                      <div
-                        className={`w-6 rounded-t-md transition-all duration-500 ${m.total > 0 ? 'bg-gradient-to-t from-green-600 to-green-400' : 'bg-gray-100'}`}
-                        style={{ height: `${barHeight}%` }}
-                      />
-                    </div>
-                    <span className={`text-xs font-bold ${m.total > 0 ? 'text-gray-900' : 'text-gray-400'}`}>
-                      {'\u20AC'}{m.total.toFixed(0)}
-                    </span>
-                    {m.trips > 0 && (
-                      <span className="text-[10px] text-gray-400 mt-0.5">{m.trips} trip{m.trips !== 1 ? 's' : ''}</span>
-                    )}
-                  </div>
-                );
-              })}
+
+            <div className="p-5 pt-2">
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
+                {monthlyEarnings.map((m) => {
+                  const barHeight = m.total > 0 ? Math.max((m.total / maxMonthly) * 100, 8) : 0;
+                  const currentMonth = new Date().getMonth();
+                  const currentYear = new Date().getFullYear();
+                  const isCurrent = earningsYear === currentYear && m.month === currentMonth;
+                  const isSelected = selectedMonth === m.month;
+                  return (
+                    <button
+                      key={m.month}
+                      onClick={() => setSelectedMonth(isSelected ? null : m.month)}
+                      className={`flex flex-col items-center p-2 rounded-xl transition-all duration-200 ${
+                        isSelected ? 'bg-green-100 ring-2 ring-green-400 scale-105' :
+                        isCurrent ? 'bg-green-50 ring-1 ring-green-200' : 'hover:bg-gray-50'
+                      }`}
+                    >
+                      <span className="text-xs font-medium text-gray-500 mb-2">{m.label}</span>
+                      <div className="w-full h-20 flex items-end justify-center mb-2">
+                        <div
+                          className={`w-6 rounded-t-md transition-all duration-500 ${m.total > 0 ? 'bg-gradient-to-t from-green-600 to-green-400' : 'bg-gray-100'}`}
+                          style={{ height: `${barHeight}%` }}
+                        />
+                      </div>
+                      <span className={`text-xs font-bold ${m.total > 0 ? 'text-gray-900' : 'text-gray-400'}`}>
+                        {'\u20AC'}{m.total.toFixed(0)}
+                      </span>
+                      {m.trips > 0 && (
+                        <span className="text-[10px] text-gray-400 mt-0.5">{m.trips} trip{m.trips !== 1 ? 's' : ''}</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
+
+            {/* Expanded month detail */}
+            {selectedMonth !== null && (
+              <div className="px-5 pb-5 border-t border-gray-100">
+                <div className="pt-4">
+                  <h4 className="text-sm font-semibold text-gray-900 mb-3">
+                    {monthlyEarnings[selectedMonth].fullLabel} {earningsYear} Details
+                  </h4>
+
+                  {selectedMonthTrips.length === 0 && selectedMonthPayments.length === 0 ? (
+                    <p className="text-sm text-gray-400 py-4 text-center">No earnings this month</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {selectedMonthTrips.length > 0 && (
+                        <div>
+                          <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Completed Trips</p>
+                          <div className="space-y-1.5">
+                            {selectedMonthTrips.map((trip) => (
+                              <div key={trip.id} className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <Car className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                                  <div className="min-w-0">
+                                    <p className="text-sm text-gray-800 truncate">
+                                      {trip.pickup_location || 'Pickup'} → {trip.dropoff_location || 'Dropoff'}
+                                    </p>
+                                    <p className="text-xs text-gray-400">
+                                      {new Date(trip.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}
+                                      {trip.time ? ` at ${trip.time}` : ''}
+                                    </p>
+                                  </div>
+                                </div>
+                                <span className="text-sm font-semibold text-green-700 shrink-0 ml-2">
+                                  {'\u20AC'}{(trip.driver_fee || trip.price).toFixed(2)}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {selectedMonthPayments.length > 0 && (
+                        <div className={selectedMonthTrips.length > 0 ? 'mt-3' : ''}>
+                          <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Payments</p>
+                          <div className="space-y-1.5">
+                            {selectedMonthPayments.map((payment) => (
+                              <div key={payment.id} className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <Wallet className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                                  <div className="min-w-0">
+                                    <p className="text-sm text-gray-800 truncate">{payment.description || 'Payment'}</p>
+                                    <p className="text-xs text-gray-400">
+                                      {new Date(payment.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}
+                                    </p>
+                                  </div>
+                                </div>
+                                <span className="text-sm font-semibold text-green-700 shrink-0 ml-2">
+                                  {'\u20AC'}{payment.amount.toFixed(2)}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="flex justify-between items-center pt-3 mt-2 border-t border-gray-200">
+                        <span className="text-sm font-medium text-gray-600">Month Total</span>
+                        <span className="text-base font-bold text-green-700">
+                          {'\u20AC'}{monthlyEarnings[selectedMonth].total.toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
