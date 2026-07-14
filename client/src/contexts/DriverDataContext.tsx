@@ -306,7 +306,6 @@ export function DriverDataProvider({ children, driverId, driverUuid }: DriverDat
         description,
         status: 'pending',
         source: 'driver',
-        user_id: driverUuid,
       })
       .select()
       .single();
