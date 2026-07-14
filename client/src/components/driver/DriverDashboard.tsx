@@ -1,29 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  LogOut, 
-  MapPin, 
-  Users, 
-  Clock, 
-  DollarSign, 
-  Phone, 
-  Car, 
-  RefreshCw, 
-  AlertTriangle,
-  CheckCircle,
-  CheckCircle2,
-  Calendar,
-  User,
-  Building2,
-  ExternalLink,
-  ArrowRight,
-  Bell,
-  TrendingUp,
-  Activity,
-  XCircle,
-  PlayCircle,
-  PauseCircle
-} from 'lucide-react';
+import { LogOut, MapPin, Users, Clock, DollarSign, Phone, Car, RefreshCw, TriangleAlert as AlertTriangle, CircleCheck as CheckCircle, CircleCheck as CheckCircle2, Calendar, User, Building2, ExternalLink, ArrowRight, Bell, TrendingUp, Activity, Circle as XCircle, CirclePlay as PlayCircle, CirclePause as PauseCircle, Copy, Check } from 'lucide-react';
 import { DriverDataProvider, useDriverData } from '../../contexts/DriverDataContext';
 
 interface DriverDashboardProps {
@@ -41,6 +18,7 @@ const DriverProjectCard = ({ project, companyName, carTypeName }: {
 }) => {
   const { updateProjectStatus } = useDriverData();
   const [updating, setUpdating] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const handleStatusUpdate = async (status: 'accepted' | 'started' | 'declined') => {
     setUpdating(true);
@@ -207,6 +185,19 @@ const DriverProjectCard = ({ project, companyName, carTypeName }: {
             >
               Call Client
             </a>
+            {project.client_phone && (
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(project.client_phone || '');
+                  setCopiedId(project.id);
+                  setTimeout(() => setCopiedId(null), 2000);
+                }}
+                className="p-1 rounded hover:bg-blue-100 transition-colors text-blue-500 hover:text-blue-700"
+                title="Copy contact number"
+              >
+                {copiedId === project.id ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
+              </button>
+            )}
           </div>
           <div className="flex items-center space-x-2">
             <Car className="w-4 h-4 text-blue-600" />

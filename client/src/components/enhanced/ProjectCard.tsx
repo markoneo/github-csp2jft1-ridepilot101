@@ -1,25 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  MapPin,
-  Users,
-  Clock,
-  DollarSign,
-  Calendar,
-  Phone,
-  Car,
-  ArrowRight,
-  Edit,
-  Trash2,
-  Play,
-  CheckCircle2,
-  FileText,
-  Star,
-  AlertCircle,
-  Zap,
-  ChevronDown,
-  CalendarPlus
-} from 'lucide-react';
+import { MapPin, Users, Clock, DollarSign, Calendar, Phone, Car, ArrowRight, CreditCard as Edit, Trash2, Play, CircleCheck as CheckCircle2, FileText, Star, CircleAlert as AlertCircle, Zap, ChevronDown, CalendarPlus, Copy, Check } from 'lucide-react';
 
 interface ProjectCardProps {
   project: {
@@ -78,6 +59,7 @@ const ProjectCard = React.memo(({
 }: ProjectCardProps) => {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const [isWorking, setIsWorking] = useState(false);
+  const [copiedContact, setCopiedContact] = useState(false);
 
   const handleTripAction = React.useCallback(async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -617,6 +599,20 @@ const ProjectCard = React.memo(({
                     >
                       {project.clientPhone || 'Not provided'}
                     </a>
+                    {project.clientPhone && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigator.clipboard.writeText(project.clientPhone || '');
+                          setCopiedContact(true);
+                          setTimeout(() => setCopiedContact(false), 2000);
+                        }}
+                        className="ml-auto p-1.5 rounded-lg hover:bg-slate-200 transition-colors text-slate-500 hover:text-slate-700"
+                        title="Copy contact number"
+                      >
+                        {copiedContact ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
