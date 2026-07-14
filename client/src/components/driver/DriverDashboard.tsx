@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LogOut, MapPin, Users, Clock, DollarSign, Phone, Car, RefreshCw, TriangleAlert as AlertTriangle, CircleCheck as CheckCircle, CircleCheck as CheckCircle2, Calendar, User, Building2, ExternalLink, ArrowRight, Bell, TrendingUp, Activity, Circle as XCircle, CirclePlay as PlayCircle, CirclePause as PauseCircle, Copy, Check } from 'lucide-react';
+import { LogOut, MapPin, Users, Clock, DollarSign, Phone, Car, RefreshCw, TriangleAlert as AlertTriangle, CircleCheck as CheckCircle, CircleCheck as CheckCircle2, Calendar, User, Building2, ExternalLink, ArrowRight, Bell, TrendingUp, Activity, Circle as XCircle, CirclePlay as PlayCircle, CirclePause as PauseCircle, Copy, Check, Plus, X, Wallet } from 'lucide-react';
 import { DriverDataProvider, useDriverData } from '../../contexts/DriverDataContext';
 
 interface DriverDashboardProps {
@@ -310,8 +310,12 @@ const DashboardContent = ({ driverName, onLogout }: {
   driverName: string; 
   onLogout: () => void;
 }) => {
-  const { projects, companies, carTypes, loading, error, refreshProjects, retryCount, driverInfo } = useDriverData();
+  const { projects, companies, carTypes, payments, loading, error, refreshProjects, updateProjectStatus, addDriverPayment, retryCount, driverInfo } = useDriverData();
   const [refreshing, setRefreshing] = useState(false);
+  const [showEarningsForm, setShowEarningsForm] = useState(false);
+  const [earningsForm, setEarningsForm] = useState({ amount: '', date: new Date().toISOString().split('T')[0], description: '' });
+  const [submittingEarnings, setSubmittingEarnings] = useState(false);
+  const [earningsError, setEarningsError] = useState('');
   
   // Debug info
   useEffect(() => {
@@ -388,12 +392,16 @@ const DashboardContent = ({ driverName, onLogout }: {
     const pending = projects.filter(p => p.acceptance_status === 'pending').length;
     const accepted = projects.filter(p => p.acceptance_status === 'accepted').length;
     const completed = projects.filter(p => p.status === 'completed').length;
-    const totalEarnings = projects
+    const tripEarnings = projects
       .filter(p => p.status === 'completed')
       .reduce((sum, p) => sum + (p.driver_fee || p.price), 0);
+    const paymentEarnings = payments
+      .filter(p => p.status === 'paid')
+      .reduce((sum, p) => sum + p.amount, 0);
+    const totalEarnings = tripEarnings + paymentEarnings;
 
     return { pending, accepted, completed, totalEarnings };
-  }, [projects]);
+  }, [projects, payments]);
 
   if (loading) {
     return (
@@ -651,6 +659,162 @@ const DashboardContent = ({ driverName, onLogout }: {
             )}
           </div>
         )}
+
+        {/* Earnings / Payments Section */}
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-3">
+              <div className="bg-green-100 p-2 rounded-lg">
+                <Wallet className="w-5 h-5 text-green-600" />
+              </div>
+              <h2 className="text-xl font-bold text-gray-700">Earnings & Payments</h2>
+            </div>
+            <button
+              onClick={() => {
+                setShowEarningsForm(true);
+                setEarningsError('');
+                setEarningsForm({ amount: '', date: new Date().toISOString().split('T')[0], description: '' });
+              }}
+              className="flex items-center space-x-1 bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add Earnings</span>
+            </button>
+          </div>
+
+          {/* Add Earnings Modal */}
+          {showEarningsForm && (
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-lg font-bold text-gray-900">Add Manual Earnings</h3>
+                  <button onClick={() => setShowEarningsForm(false)} className="p-1 hover:bg-gray-100 rounded-lg">
+                    <X className="w-5 h-5 text-gray-500" />
+                  </button>
+                </div>
+
+                {earningsError && (
+                  <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm">
+                    {earningsError}
+                  </div>
+                )}
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Amount (EUR)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0.01"
+                      value={earningsForm.amount}
+                      onChange={(e) => setEarningsForm({ ...earningsForm, amount: e.target.value })}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                      placeholder="0.00"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                    <input
+                      type="date"
+                      value={earningsForm.date}
+                      onChange={(e) => setEarningsForm({ ...earningsForm, date: e.target.value })}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                    <input
+                      type="text"
+                      value={earningsForm.description}
+                      onChange={(e) => setEarningsForm({ ...earningsForm, description: e.target.value })}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                      placeholder="e.g. Cash tip, Private ride"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex space-x-3 mt-6">
+                  <button
+                    onClick={() => setShowEarningsForm(false)}
+                    className="flex-1 border border-gray-300 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={async () => {
+                      const amount = parseFloat(earningsForm.amount);
+                      if (!amount || amount <= 0) {
+                        setEarningsError('Please enter a valid amount');
+                        return;
+                      }
+                      if (!earningsForm.date) {
+                        setEarningsError('Please select a date');
+                        return;
+                      }
+                      setSubmittingEarnings(true);
+                      setEarningsError('');
+                      try {
+                        await addDriverPayment(amount, earningsForm.date, earningsForm.description || 'Manual earnings');
+                        setShowEarningsForm(false);
+                      } catch (err) {
+                        setEarningsError('Failed to add earnings. Please try again.');
+                      } finally {
+                        setSubmittingEarnings(false);
+                      }
+                    }}
+                    disabled={submittingEarnings}
+                    className="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50"
+                  >
+                    {submittingEarnings ? 'Adding...' : 'Add Earnings'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Payments List */}
+          {payments.length > 0 ? (
+            <div className="space-y-3">
+              {payments.slice(0, 10).map(payment => (
+                <div key={payment.id} className="bg-white rounded-xl shadow-sm p-4 border border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2 mb-1">
+                        <span className="font-semibold text-gray-900">{payment.description || 'Payment'}</span>
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                          payment.source === 'driver' 
+                            ? 'bg-blue-100 text-blue-700' 
+                            : 'bg-gray-100 text-gray-600'
+                        }`}>
+                          {payment.source === 'driver' ? 'Added by you' : 'From dispatcher'}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-500">
+                        {new Date(payment.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-lg font-bold text-green-600">€{payment.amount.toFixed(2)}</span>
+                      <p className={`text-xs font-medium ${payment.status === 'paid' ? 'text-green-500' : 'text-amber-500'}`}>
+                        {payment.status === 'paid' ? 'Paid' : 'Pending'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {payments.length > 10 && (
+                <div className="text-center">
+                  <span className="text-sm text-gray-500">{payments.length - 10} more payments</span>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200 text-center">
+              <Wallet className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+              <p className="text-gray-500 text-sm">No payment records yet. Add your earnings manually or wait for dispatcher payments.</p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

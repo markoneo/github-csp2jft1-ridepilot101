@@ -35,14 +35,28 @@ interface DriverCarType {
   capacity: number;
   description?: string;
 }
+interface DriverPayment {
+  id: string;
+  driver_id: string;
+  amount: number;
+  date: string;
+  status: 'pending' | 'paid';
+  description: string;
+  source: 'admin' | 'driver';
+  completed_at?: string;
+  created_at: string;
+}
+
 interface DriverDataContextType {
   projects: DriverProject[];
   companies: DriverCompany[];
   carTypes: DriverCarType[];
+  payments: DriverPayment[];
   loading: boolean;
   error: string | null;
   refreshProjects: () => Promise<void>;
   updateProjectStatus: (projectId: string, status: 'accepted' | 'started' | 'declined' | 'completed') => Promise<void>;
+  addDriverPayment: (amount: number, date: string, description: string) => Promise<void>;
   retryCount: number;
   driverInfo: any;
 }
@@ -71,6 +85,7 @@ export function DriverDataProvider({ children, driverId, driverUuid }: DriverDat
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const [driverInfo, setDriverInfo] = useState<any>(null);
+  const [payments, setPayments] = useState<DriverPayment[]>([]);
 
   // Fetch driver-specific projects
   const fetchDriverProjects = useCallback(async () => {
@@ -163,6 +178,20 @@ export function DriverDataProvider({ children, driverId, driverUuid }: DriverDat
       } catch (loginUpdateError) {
         // Ignore errors if last_login column doesn't exist
         console.log('Note: last_login column not available, skipping update');
+      }
+
+      // Fetch driver payments
+      try {
+        const { data: paymentsData, error: paymentsError } = await supabase
+          .rpc('get_driver_payments', { driver_uuid: driverUuid });
+
+        if (paymentsError) {
+          console.error('Error fetching driver payments:', paymentsError);
+        } else {
+          setPayments(paymentsData || []);
+        }
+      } catch (paymentErr) {
+        console.log('Payments fetch not available:', paymentErr);
       }
 
       setError(null);
@@ -264,6 +293,25 @@ export function DriverDataProvider({ children, driverId, driverUuid }: DriverDat
     }
   }, [driverUuid]);
 
+  const addDriverPayment = useCallback(async (amount: number, date: string, description: string) => {
+    const { data, error } = await supabase
+      .rpc('add_driver_payment', {
+        p_driver_id: driverUuid,
+        p_amount: amount,
+        p_date: date,
+        p_description: description
+      });
+
+    if (error) {
+      console.error('Error adding driver payment:', error);
+      throw error;
+    }
+
+    if (data) {
+      setPayments(prev => [data, ...prev]);
+    }
+  }, [driverUuid]);
+
   // Refresh projects manually
   const refreshProjects = useCallback(async () => {
     setLoading(true);
@@ -312,10 +360,12 @@ export function DriverDataProvider({ children, driverId, driverUuid }: DriverDat
     projects,
     companies,
     carTypes,
+    payments,
     loading,
     error,
     refreshProjects,
     updateProjectStatus,
+    addDriverPayment,
     retryCount,
     driverInfo
   };

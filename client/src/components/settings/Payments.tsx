@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, Edit2, Trash2, DollarSign, Users, ChevronDown, ChevronUp, TrendingUp, Calendar, Clock, BarChart3, Download } from 'lucide-react';
+import { ArrowLeft, Plus, CreditCard as Edit2, Trash2, DollarSign, Users, ChevronDown, ChevronUp, TrendingUp, Calendar, Clock, ChartBar as BarChart3, Download } from 'lucide-react';
 import { useData } from '../../contexts/DataContext';
 import Modal from '../Modal';
 
@@ -11,6 +11,7 @@ interface Payment {
   date: string;
   status: 'pending' | 'paid';
   description: string;
+  source?: 'admin' | 'driver';
   completed_at?: string;
   created_at: string;
 }
@@ -604,7 +605,12 @@ export default function Payments() {
                         {driverPayments.pending.map(payment => (
                           <div key={payment.id} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
                             <div className="mr-2">
-                              <div className="font-medium">€{payment.amount.toFixed(2)}</div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">€{payment.amount.toFixed(2)}</span>
+                                {payment.source === 'driver' && (
+                                  <span className="text-xs px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-medium">Driver</span>
+                                )}
+                              </div>
                               <div className="text-sm text-gray-500">{payment.description}</div>
                               <div className="text-xs text-gray-400">
                                 {new Date(payment.date).toLocaleDateString()}
@@ -691,7 +697,12 @@ export default function Payments() {
                         {driverPayments.paid.map(payment => (
                           <div key={payment.id} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
                             <div className="mr-2">
-                              <div className="font-medium">€{payment.amount.toFixed(2)}</div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">€{payment.amount.toFixed(2)}</span>
+                                {payment.source === 'driver' && (
+                                  <span className="text-xs px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-medium">Driver</span>
+                                )}
+                              </div>
                               <div className="text-sm text-gray-500">{payment.description}</div>
                               <div className="text-xs text-gray-400">
                                 {new Date(payment.date).toLocaleDateString()}

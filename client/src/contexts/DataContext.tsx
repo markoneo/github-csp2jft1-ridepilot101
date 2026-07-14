@@ -56,6 +56,7 @@ interface Payment {
   date: string;
   status: 'pending' | 'paid';
   description: string;
+  source?: 'admin' | 'driver';
   completed_at?: string;
   created_at: string;
 }
