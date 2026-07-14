@@ -304,7 +304,7 @@ export function DriverDataProvider({ children, driverId, driverUuid }: DriverDat
         amount,
         date,
         description,
-        status: 'pending',
+        status: 'paid',
         source: 'driver',
       })
       .select()
