@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LogOut, MapPin, Users, Clock, DollarSign, Phone, Car, RefreshCw, TriangleAlert as AlertTriangle, CircleCheck as CheckCircle, CircleCheck as CheckCircle2, Calendar, User, Building2, ExternalLink, ArrowRight, Bell, TrendingUp, Activity, Circle as XCircle, CirclePlay as PlayCircle, CirclePause as PauseCircle, Copy, Check, Plus, X, Wallet } from 'lucide-react';
 import { DriverDataProvider, useDriverData } from '../../contexts/DriverDataContext';
@@ -389,6 +389,32 @@ const DashboardContent = ({ driverName, onLogout }: {
 
     return categorized;
   }, [projects]);
+
+  const getDateLabel = useCallback((dateStr: string) => {
+    const date = new Date(dateStr + 'T00:00:00');
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const isToday = date.getTime() === today.getTime();
+    const isTomorrow = date.getTime() === tomorrow.getTime();
+
+    return {
+      main: isToday ? 'Today' : isTomorrow ? 'Tomorrow' : date.toLocaleDateString('en-US', { weekday: 'long' }),
+      sub: date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }),
+    };
+  }, []);
+
+  const groupByDate = useCallback((items: any[]) => {
+    const map = new Map<string, any[]>();
+    items.forEach(p => {
+      const key = p.date;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(p);
+    });
+    return Array.from(map.entries());
+  }, []);
 
   const stats = useMemo(() => {
     const pending = projects.filter(p => p.acceptance_status === 'pending').length;
@@ -782,15 +808,34 @@ const DashboardContent = ({ driverName, onLogout }: {
                 {organizedProjects.urgent.length} trip{organizedProjects.urgent.length !== 1 ? 's' : ''}
               </span>
             </div>
-            <div className="grid gap-4 md:grid-cols-2">
-              {organizedProjects.urgent.map(project => (
-                <DriverProjectCard
-                  key={project.id}
-                  project={project}
-                  companyName={getCompanyName(project.company_id)}
-                  carTypeName={getCarTypeName(project.car_type_id)}
-                />
-              ))}
+            <div className="space-y-4">
+              {groupByDate(organizedProjects.urgent).map(([dateKey, trips]) => {
+                const dl = getDateLabel(dateKey);
+                return (
+                  <div key={dateKey} className="space-y-3">
+                    <div className="bg-gradient-to-r from-red-600 to-red-500 rounded-xl px-4 py-3 shadow-md border border-white/20 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="bg-white/20 backdrop-blur-sm p-2 rounded-lg">
+                          <Calendar className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-bold text-white leading-tight">{dl.main}</h3>
+                          <p className="text-white/80 text-sm">{dl.sub}</p>
+                        </div>
+                      </div>
+                      <div className="bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-lg text-center">
+                        <span className="text-lg font-bold text-white">{trips.length}</span>
+                        <p className="text-white/80 text-xs">trip{trips.length !== 1 ? 's' : ''}</p>
+                      </div>
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      {trips.map((project: any) => (
+                        <DriverProjectCard key={project.id} project={project} companyName={getCompanyName(project.company_id)} carTypeName={getCarTypeName(project.car_type_id)} />
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
@@ -806,15 +851,34 @@ const DashboardContent = ({ driverName, onLogout }: {
                 {organizedProjects.today.length} trip{organizedProjects.today.length !== 1 ? 's' : ''}
               </span>
             </div>
-            <div className="grid gap-4 md:grid-cols-2">
-              {organizedProjects.today.map(project => (
-                <DriverProjectCard
-                  key={project.id}
-                  project={project}
-                  companyName={getCompanyName(project.company_id)}
-                  carTypeName={getCarTypeName(project.car_type_id)}
-                />
-              ))}
+            <div className="space-y-4">
+              {groupByDate(organizedProjects.today).map(([dateKey, trips]) => {
+                const dl = getDateLabel(dateKey);
+                return (
+                  <div key={dateKey} className="space-y-3">
+                    <div className="bg-gradient-to-r from-green-700 to-green-500 rounded-xl px-4 py-3 shadow-md border border-white/20 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="bg-white/20 backdrop-blur-sm p-2 rounded-lg">
+                          <Calendar className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-bold text-white leading-tight">{dl.main}</h3>
+                          <p className="text-white/80 text-sm">{dl.sub}</p>
+                        </div>
+                      </div>
+                      <div className="bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-lg text-center">
+                        <span className="text-lg font-bold text-white">{trips.length}</span>
+                        <p className="text-white/80 text-xs">trip{trips.length !== 1 ? 's' : ''}</p>
+                      </div>
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      {trips.map((project: any) => (
+                        <DriverProjectCard key={project.id} project={project} companyName={getCompanyName(project.company_id)} carTypeName={getCarTypeName(project.car_type_id)} />
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
@@ -830,15 +894,34 @@ const DashboardContent = ({ driverName, onLogout }: {
                 {organizedProjects.upcoming.length} trip{organizedProjects.upcoming.length !== 1 ? 's' : ''}
               </span>
             </div>
-            <div className="grid gap-4 md:grid-cols-2">
-              {organizedProjects.upcoming.map(project => (
-                <DriverProjectCard
-                  key={project.id}
-                  project={project}
-                  companyName={getCompanyName(project.company_id)}
-                  carTypeName={getCarTypeName(project.car_type_id)}
-                />
-              ))}
+            <div className="space-y-4">
+              {groupByDate(organizedProjects.upcoming).map(([dateKey, trips]) => {
+                const dl = getDateLabel(dateKey);
+                return (
+                  <div key={dateKey} className="space-y-3">
+                    <div className="bg-gradient-to-r from-green-700 to-green-500 rounded-xl px-4 py-3 shadow-md border border-white/20 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="bg-white/20 backdrop-blur-sm p-2 rounded-lg">
+                          <Calendar className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-bold text-white leading-tight">{dl.main}</h3>
+                          <p className="text-white/80 text-sm">{dl.sub}</p>
+                        </div>
+                      </div>
+                      <div className="bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-lg text-center">
+                        <span className="text-lg font-bold text-white">{trips.length}</span>
+                        <p className="text-white/80 text-xs">trip{trips.length !== 1 ? 's' : ''}</p>
+                      </div>
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      {trips.map((project: any) => (
+                        <DriverProjectCard key={project.id} project={project} companyName={getCompanyName(project.company_id)} carTypeName={getCarTypeName(project.car_type_id)} />
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
