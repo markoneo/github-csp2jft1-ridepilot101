@@ -522,7 +522,16 @@ const DashboardContent = ({ driverName, onLogout }: {
                 <p className="text-sm text-gray-600">Earnings</p>
                 <p className="text-xl font-bold text-green-600">€{stats.totalEarnings.toFixed(0)}</p>
               </div>
-              <DollarSign className="w-8 h-8 text-green-500" />
+              <div className="flex flex-col items-center gap-1">
+                <DollarSign className="w-8 h-8 text-green-500" />
+                <button
+                  onClick={() => setShowEarningsForm(true)}
+                  className="flex items-center gap-1 text-xs font-medium text-white bg-green-600 hover:bg-green-700 px-2 py-1 rounded-lg transition-colors"
+                >
+                  <Plus className="w-3 h-3" />
+                  Add
+                </button>
+              </div>
             </div>
           </div>
         </div>
