@@ -316,6 +316,7 @@ const DashboardContent = ({ driverName, onLogout }: {
   const [earningsForm, setEarningsForm] = useState({ amount: '', date: new Date().toISOString().split('T')[0], description: '' });
   const [submittingEarnings, setSubmittingEarnings] = useState(false);
   const [earningsError, setEarningsError] = useState('');
+  const [earningsSuccess, setEarningsSuccess] = useState('');
   
   // Debug info
   useEffect(() => {
@@ -535,6 +536,21 @@ const DashboardContent = ({ driverName, onLogout }: {
             </div>
           </div>
         </div>
+
+        {/* Success Toast */}
+        <AnimatePresence>
+          {earningsSuccess && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl flex items-center gap-2"
+            >
+              <CheckCircle className="w-5 h-5 text-green-600" />
+              <span className="font-medium">{earningsSuccess}</span>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Project Categories */}
         {organizedProjects.urgent.length > 0 && (
@@ -762,11 +778,16 @@ const DashboardContent = ({ driverName, onLogout }: {
                       }
                       setSubmittingEarnings(true);
                       setEarningsError('');
+                      setEarningsSuccess('');
                       try {
                         await addDriverPayment(amount, earningsForm.date, earningsForm.description || 'Manual earnings');
+                        setEarningsForm({ amount: '', date: new Date().toISOString().split('T')[0], description: '' });
                         setShowEarningsForm(false);
-                      } catch (err) {
-                        setEarningsError('Failed to add earnings. Please try again.');
+                        setEarningsSuccess('Earnings added successfully!');
+                        setTimeout(() => setEarningsSuccess(''), 3000);
+                      } catch (err: any) {
+                        console.error('Earnings submit error:', err);
+                        setEarningsError(err?.message || 'Failed to add earnings. Please try again.');
                       } finally {
                         setSubmittingEarnings(false);
                       }
