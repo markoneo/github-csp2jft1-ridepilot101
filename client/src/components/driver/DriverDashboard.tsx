@@ -313,6 +313,7 @@ const DashboardContent = ({ driverName, onLogout }: {
   const { projects, companies, carTypes, payments, loading, error, refreshProjects, updateProjectStatus, addDriverPayment, retryCount, driverInfo } = useDriverData();
   const [refreshing, setRefreshing] = useState(false);
   const [showEarningsForm, setShowEarningsForm] = useState(false);
+  const [paymentsExpanded, setPaymentsExpanded] = useState(false);
   const [earningsForm, setEarningsForm] = useState({ amount: '', date: new Date().toISOString().split('T')[0], description: '' });
   const [submittingEarnings, setSubmittingEarnings] = useState(false);
   const [earningsError, setEarningsError] = useState('');
@@ -903,25 +904,40 @@ const DashboardContent = ({ driverName, onLogout }: {
         )}
 
         {/* Earnings / Payments Section */}
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center space-x-3">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => setPaymentsExpanded(e => !e)}
+              className="flex-1 px-5 py-4 flex items-center gap-3 cursor-pointer hover:bg-gray-50 transition-colors"
+            >
               <div className="bg-green-100 p-2 rounded-lg">
                 <Wallet className="w-5 h-5 text-green-600" />
               </div>
-              <h2 className="text-xl font-bold text-gray-700">Earnings & Payments</h2>
-            </div>
-            <button
-              onClick={() => {
-                setShowEarningsForm(true);
-                setEarningsError('');
-                setEarningsForm({ amount: '', date: new Date().toISOString().split('T')[0], description: '' });
-              }}
-              className="flex items-center space-x-1 bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Add Earnings</span>
+              <div className="text-left">
+                <h2 className="text-lg font-semibold text-gray-900">Earnings & Payments</h2>
+                <p className="text-sm text-gray-500">{payments.length} record{payments.length !== 1 ? 's' : ''}</p>
+              </div>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className={`w-5 h-5 text-gray-400 transition-transform duration-300 ml-auto ${paymentsExpanded ? 'rotate-180' : ''}`}
+                fill="none" viewBox="0 0 24 24" stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
             </button>
+            <div className="pr-4">
+              <button
+                onClick={() => {
+                  setShowEarningsForm(true);
+                  setEarningsError('');
+                  setEarningsForm({ amount: '', date: new Date().toISOString().split('T')[0], description: '' });
+                }}
+                className="flex items-center space-x-1 bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add</span>
+              </button>
+            </div>
           </div>
 
           {/* Add Earnings Modal */}
@@ -1019,48 +1035,52 @@ const DashboardContent = ({ driverName, onLogout }: {
             </div>
           )}
 
-          {/* Payments List */}
-          {payments.length > 0 ? (
-            <div className="space-y-3">
-              {payments.slice(0, 10).map(payment => (
-                <div key={payment.id} className="bg-white rounded-xl shadow-sm p-4 border border-gray-200">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-2 mb-1">
-                        <span className="font-semibold text-gray-900">{payment.description || 'Payment'}</span>
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                          payment.source === 'driver' 
-                            ? 'bg-blue-100 text-blue-700' 
-                            : 'bg-gray-100 text-gray-600'
-                        }`}>
-                          {payment.source === 'driver' ? 'Added by you' : 'From dispatcher'}
-                        </span>
+          {/* Collapsible Payments List */}
+          <div className={`transition-all duration-300 ease-in-out overflow-hidden ${paymentsExpanded ? 'max-h-[3000px] opacity-100' : 'max-h-0 opacity-0'}`}>
+            <div className="border-t border-gray-100">
+              {payments.length > 0 ? (
+                <div className="p-4 space-y-2">
+                  {payments.slice(0, 10).map(payment => (
+                    <div key={payment.id} className="bg-gray-50 rounded-lg px-4 py-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center space-x-2 mb-1">
+                            <span className="font-semibold text-gray-900 text-sm truncate">{payment.description || 'Payment'}</span>
+                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${
+                              payment.source === 'driver' 
+                                ? 'bg-blue-100 text-blue-700' 
+                                : 'bg-gray-200 text-gray-600'
+                            }`}>
+                              {payment.source === 'driver' ? 'Added by you' : 'From dispatcher'}
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-500">
+                            {new Date(payment.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          </p>
+                        </div>
+                        <div className="text-right shrink-0 ml-3">
+                          <span className="text-base font-bold text-green-600">{'\u20AC'}{payment.amount.toFixed(2)}</span>
+                          <p className={`text-xs font-medium ${payment.status === 'paid' ? 'text-green-500' : 'text-amber-500'}`}>
+                            {payment.status === 'paid' ? 'Paid' : 'Pending'}
+                          </p>
+                        </div>
                       </div>
-                      <p className="text-sm text-gray-500">
-                        {new Date(payment.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                      </p>
                     </div>
-                    <div className="text-right">
-                      <span className="text-lg font-bold text-green-600">€{payment.amount.toFixed(2)}</span>
-                      <p className={`text-xs font-medium ${payment.status === 'paid' ? 'text-green-500' : 'text-amber-500'}`}>
-                        {payment.status === 'paid' ? 'Paid' : 'Pending'}
-                      </p>
+                  ))}
+                  {payments.length > 10 && (
+                    <div className="text-center pt-1">
+                      <span className="text-sm text-gray-500">{payments.length - 10} more payments</span>
                     </div>
-                  </div>
+                  )}
                 </div>
-              ))}
-              {payments.length > 10 && (
-                <div className="text-center">
-                  <span className="text-sm text-gray-500">{payments.length - 10} more payments</span>
+              ) : (
+                <div className="p-6 text-center">
+                  <Wallet className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                  <p className="text-gray-500 text-sm">No payment records yet. Add your earnings manually or wait for dispatcher payments.</p>
                 </div>
               )}
             </div>
-          ) : (
-            <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200 text-center">
-              <Wallet className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-              <p className="text-gray-500 text-sm">No payment records yet. Add your earnings manually or wait for dispatcher payments.</p>
-            </div>
-          )}
+          </div>
         </div>
       </div>
     </div>
