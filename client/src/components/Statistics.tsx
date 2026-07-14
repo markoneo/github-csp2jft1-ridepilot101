@@ -1,20 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { 
-  ArrowLeft, 
-  BarChart2, 
-  DollarSign, 
-  Calendar, 
-  TrendingUp, 
-  Building2,
-  Download,
-  Users,
-  Clock,
-  Activity,
-  PieChart,
-  LineChart,
-  Filter,
-  RefreshCw
-} from 'lucide-react';
+import { ArrowLeft, ChartBar as BarChart2, DollarSign, Calendar, TrendingUp, Building2, Download, Users, Clock, Activity, ChartPie as PieChart, ChartLine as LineChart, Filter, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement, LineElement, PointElement } from 'chart.js';
@@ -177,6 +162,26 @@ export default function Statistics() {
       totals: sortedEntries.map(([, value]) => value)
     };
   }, [selectedCompanyData, timePeriod, selectedYear, selectedMonth]);
+
+  // Calculate completed projects by driver
+  const driverCompletedStats = useMemo(() => {
+    const yearProjects = projects.filter(p => {
+      const projectYear = new Date(p.date).getFullYear();
+      return projectYear === selectedYear && p.status === 'completed';
+    });
+
+    const driverMap = new Map<string, { name: string; count: number; earnings: number }>();
+
+    yearProjects.forEach(project => {
+      if (!project.driver) return;
+      const existing = driverMap.get(project.driver) || { name: project.driver, count: 0, earnings: 0 };
+      existing.count += 1;
+      existing.earnings += project.price;
+      driverMap.set(project.driver, existing);
+    });
+
+    return Array.from(driverMap.values()).sort((a, b) => b.count - a.count);
+  }, [projects, selectedYear]);
 
   // Calculate overview statistics
   const overviewStats = useMemo(() => {
@@ -775,6 +780,60 @@ export default function Statistics() {
             )}
           </div>
         )}
+
+        {/* Completed Projects by Driver */}
+        <div className="mt-8 bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-200 flex items-center gap-3">
+            <div className="bg-emerald-100 p-2 rounded-lg">
+              <Users className="w-5 h-5 text-emerald-600" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">Completed Projects by Driver</h3>
+              <p className="text-sm text-gray-500">{selectedYear} - {driverCompletedStats.reduce((s, d) => s + d.count, 0)} total completed</p>
+            </div>
+          </div>
+          {driverCompletedStats.length > 0 ? (
+            <div className="divide-y divide-gray-100">
+              {driverCompletedStats.map((driver, index) => {
+                const maxCount = driverCompletedStats[0]?.count || 1;
+                const barWidth = (driver.count / maxCount) * 100;
+                return (
+                  <div key={driver.name} className="px-6 py-4 hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-3">
+                        <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
+                          index === 0 ? 'bg-amber-100 text-amber-700' :
+                          index === 1 ? 'bg-gray-200 text-gray-700' :
+                          index === 2 ? 'bg-orange-100 text-orange-700' :
+                          'bg-gray-100 text-gray-500'
+                        }`}>
+                          {index + 1}
+                        </span>
+                        <span className="font-medium text-gray-900">{driver.name}</span>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <span className="text-sm text-gray-500">
+                          {'\u20AC'}{driver.earnings.toFixed(0)} earned
+                        </span>
+                        <span className="text-lg font-bold text-emerald-600">{driver.count}</span>
+                      </div>
+                    </div>
+                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+                        style={{ width: `${barWidth}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="px-6 py-8 text-center text-gray-500">
+              <p>No completed projects for {selectedYear}</p>
+            </div>
+          )}
+        </div>
 
         {/* Quick Navigation */}
         <div className="mt-8 bg-blue-50 rounded-lg p-6">
