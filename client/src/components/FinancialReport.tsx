@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Download, Calendar, Building2, DollarSign, FileText, TrendingUp, BarChart2 } from 'lucide-react';
+import { ArrowLeft, Download, Calendar, Building2, DollarSign, FileText, TrendingUp, ChartBar as BarChart2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 import { saveAs } from 'file-saver';
@@ -7,8 +7,7 @@ import { saveAs } from 'file-saver';
 interface NetProfitData {
   [month: string]: {
     revenue: number;
-    completedPayments: number;
-    pendingPayments: number;
+    driverPayments: number;
     netProfit: number;
   };
 }
@@ -151,41 +150,33 @@ export default function FinancialReport() {
       Object.keys(months).forEach(monthKey => {
         profitData[monthKey] = {
           revenue: months[monthKey].total,
-          completedPayments: 0,
-          pendingPayments: 0,
+          driverPayments: 0,
           netProfit: 0
         };
       });
       
-      // Add payment data to profit calculation
+      // Add only completed (paid) driver payments as costs
       yearPayments.forEach(payment => {
+        if (payment.status !== 'paid') return;
         const date = new Date(payment.date);
         const monthKey = date.toLocaleString('default', { month: 'long' });
         
-        // Initialize month if not exists
         if (!profitData[monthKey]) {
           profitData[monthKey] = {
             revenue: 0,
-            completedPayments: 0,
-            pendingPayments: 0,
+            driverPayments: 0,
             netProfit: 0
           };
         }
         
-        // Update payment totals based on status
-        if (payment.status === 'paid') {
-          profitData[monthKey].completedPayments += payment.amount;
-        } else {
-          profitData[monthKey].pendingPayments += payment.amount;
-        }
+        profitData[monthKey].driverPayments += payment.amount;
       });
       
-      // Calculate net profit
+      // Net Profit = Revenue - Driver Payments
       Object.keys(profitData).forEach(month => {
         profitData[month].netProfit = 
           profitData[month].revenue - 
-          profitData[month].completedPayments - 
-          profitData[month].pendingPayments;
+          profitData[month].driverPayments;
       });
 
       // Convert to sorted array for display
@@ -345,7 +336,7 @@ export default function FinancialReport() {
       saveAs(blob, `driver_earnings_${selectedYear}.csv`);
     } else if (isProfitView) {
       // Profit analysis CSV format
-      let csvContent = 'Month,Revenue,Completed Payments,Pending Payments,Net Profit\n';
+      let csvContent = 'Month,Revenue,Driver Payments,Net Profit\n';
       
       // Sort months chronologically
       const months = Object.keys(netProfitData).sort((a, b) => {
@@ -359,16 +350,15 @@ export default function FinancialReport() {
       // Add data for each month
       months.forEach(month => {
         const data = netProfitData[month];
-        csvContent += `"${month}",€${data.revenue.toFixed(2)},€${data.completedPayments.toFixed(2)},€${data.pendingPayments.toFixed(2)},€${data.netProfit.toFixed(2)}\n`;
+        csvContent += `"${month}",€${data.revenue.toFixed(2)},€${data.driverPayments.toFixed(2)},€${data.netProfit.toFixed(2)}\n`;
       });
       
       // Calculate totals
       const totalRevenue = Object.values(netProfitData).reduce((sum, data) => sum + data.revenue, 0);
-      const totalCompletedPayments = Object.values(netProfitData).reduce((sum, data) => sum + data.completedPayments, 0);
-      const totalPendingPayments = Object.values(netProfitData).reduce((sum, data) => sum + data.pendingPayments, 0);
+      const totalDriverPayments = Object.values(netProfitData).reduce((sum, data) => sum + data.driverPayments, 0);
       const totalNetProfit = Object.values(netProfitData).reduce((sum, data) => sum + data.netProfit, 0);
       
-      csvContent += `"TOTAL",€${totalRevenue.toFixed(2)},€${totalCompletedPayments.toFixed(2)},€${totalPendingPayments.toFixed(2)},€${totalNetProfit.toFixed(2)}\n`;
+      csvContent += `"TOTAL",€${totalRevenue.toFixed(2)},€${totalDriverPayments.toFixed(2)},€${totalNetProfit.toFixed(2)}\n`;
       
       // Create and download file
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
@@ -710,10 +700,7 @@ export default function FinancialReport() {
                           Revenue
                         </th>
                         <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Completed Payments
-                        </th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Pending Payments
+                          Driver Payments
                         </th>
                         <th scope="col" className="bg-gray-100 px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                           Net Profit
@@ -742,10 +729,7 @@ export default function FinancialReport() {
                                 €{data.revenue.toFixed(2)}
                               </td>
                               <td className="px-6 py-3 whitespace-nowrap text-sm text-red-600 font-medium">
-                                €{data.completedPayments.toFixed(2)}
-                              </td>
-                              <td className="px-6 py-3 whitespace-nowrap text-sm text-orange-600 font-medium">
-                                €{data.pendingPayments.toFixed(2)}
+                                €{data.driverPayments.toFixed(2)}
                               </td>
                               <td className={`bg-gray-100 px-6 py-3 whitespace-nowrap text-sm font-bold ${
                                 data.netProfit >= 0 ? 'text-green-700' : 'text-red-700'
@@ -766,10 +750,7 @@ export default function FinancialReport() {
                           €{Object.values(netProfitData).reduce((sum, data) => sum + data.revenue, 0).toFixed(2)}
                         </td>
                         <td className="px-6 py-3 whitespace-nowrap text-sm font-bold text-red-700">
-                          €{Object.values(netProfitData).reduce((sum, data) => sum + data.completedPayments, 0).toFixed(2)}
-                        </td>
-                        <td className="px-6 py-3 whitespace-nowrap text-sm font-bold text-orange-700">
-                          €{Object.values(netProfitData).reduce((sum, data) => sum + data.pendingPayments, 0).toFixed(2)}
+                          €{Object.values(netProfitData).reduce((sum, data) => sum + data.driverPayments, 0).toFixed(2)}
                         </td>
                         <td className={`bg-green-100 px-6 py-3 whitespace-nowrap text-sm font-bold ${
                           Object.values(netProfitData).reduce((sum, data) => sum + data.netProfit, 0) >= 0 
@@ -949,10 +930,9 @@ export default function FinancialReport() {
                       This report shows the net profit analysis for {selectedYear}, calculated as:
                     </p>
                     <ul className="list-disc list-inside space-y-1 ml-2 mb-2">
-                      <li>Monthly Project Revenue (from all companies)</li>
-                      <li>Minus: Completed Payments (paid to drivers/vendors)</li>
-                      <li>Minus: Pending Payments (committed but not yet paid)</li>
-                      <li>Equals: Net Monthly Profit</li>
+                      <li>Revenue from all projects (regardless of payment status)</li>
+                      <li>Minus: Payments made to drivers</li>
+                      <li>Equals: Net Profit</li>
                     </ul>
                     <p>
                       Total net profit for {selectedYear}: 
