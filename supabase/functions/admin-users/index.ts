@@ -54,9 +54,17 @@ Deno.serve(async (req: Request) => {
 
     switch (action) {
       case "list_users": {
-        const { data: authData, error: authError } =
-          await supabaseAdmin.auth.admin.listUsers();
-        if (authError) throw authError;
+        const allUsers: { id: string; email?: string; created_at: string }[] = [];
+        let page = 1;
+        const perPage = 1000;
+        while (true) {
+          const { data: authData, error: authError } =
+            await supabaseAdmin.auth.admin.listUsers({ page, perPage });
+          if (authError) throw authError;
+          allUsers.push(...authData.users);
+          if (authData.users.length < perPage) break;
+          page++;
+        }
 
         const { data: publicUsers } = await supabaseAdmin
           .from("users")
@@ -69,14 +77,12 @@ Deno.serve(async (req: Request) => {
           ])
         );
 
-        const users = authData.users.map(
-          (user: { id: string; email?: string; created_at: string }) => ({
-            id: user.id,
-            email: user.email,
-            created_at: user.created_at,
-            account_status: statusMap.get(user.id) || "active",
-          })
-        );
+        const users = allUsers.map((user) => ({
+          id: user.id,
+          email: user.email,
+          created_at: user.created_at,
+          account_status: statusMap.get(user.id) || "active",
+        }));
 
         return new Response(JSON.stringify({ users }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
