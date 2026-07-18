@@ -876,7 +876,11 @@ export default function Dashboard() {
             <div className="flex items-center gap-3">
               <AlertTriangle className="w-5 h-5 text-white flex-shrink-0" />
               <p className="text-sm text-white font-medium">
-                Your account is temporarily suspended due to unpaid subscription. Please contact support or complete payment.
+                Your account is temporarily suspended due to unpaid subscription. Please contact support at{' '}
+                <a href="mailto:ridepilot.info@gmail.com" className="underline hover:text-red-100 transition-colors">
+                  ridepilot.info@gmail.com
+                </a>{' '}
+                or complete payment.
               </p>
             </div>
           </div>
